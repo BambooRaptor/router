@@ -1,45 +1,27 @@
 package router
 
 import (
-	"github.com/BambooRaptor/pipeline"
+	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/BambooRaptor/pipeline"
+	"github.com/BambooRaptor/router/pkgs/set"
 )
 
 type route struct {
-	*http.ServeMux
-	base string
-	pipe pipeline.Pipeline[http.Handler]
-}
-
-func newRoute(base string, pipe pipeline.Pipeline[http.Handler]) *route {
-	return &route{nil, base, pipe}
-}
-
-func (r *route) AssignMux(mux *http.ServeMux) {
-	r.ServeMux = mux
+	router  *Router
+	path    string
+	pipe    pipeline.Pipeline[http.Handler]
+	methods set.Set[string]
 }
 
 func (r *route) Route(pattern string) *route {
-	pattern = sanitizeRoute(pattern)
+	return r.router.newRoute(r.path+pattern, r.pipe)
+}
 
-	if len(pattern) == 0 {
-		panic("Cannot have an empty route")
-	}
-
-	if pattern[len(pattern)-1] != '/' {
-		panic("Routes cannot end with '/'")
-	}
-
-	if pattern[0] != '/' {
-		panic("Routes must begin with '/'")
-	}
-
-	return &route{
-		ServeMux: r.ServeMux,
-		base:     r.base + pattern,
-		pipe:     r.pipe,
-	}
+func (r *route) String() string {
+	return fmt.Sprint(r.path)
 }
 
 func (r *route) Use(funcs ...pipeline.Pipe[http.Handler]) *route {
@@ -53,16 +35,23 @@ func (r *route) UsePipeline(pipe pipeline.Pipeline[http.Handler]) *route {
 }
 
 func (r *route) Handle(method string, handler http.Handler) {
-	r.base = sanitizeRoute(r.base)
-	path := r.base
+	path := r.path
 	if method != "" {
-		path = method + " " + r.base
+		if r.methods.Has(method) {
+			panic(fmt.Sprintf("Method [%s] on route %q already exists", method, path))
+		}
+		r.methods.Add(method)
+		path = method + " " + r.path
 	}
-	r.ServeMux.Handle(path, r.pipe.Build(handler))
+	r.router.mux.Handle(path, r.pipe.Build(handler))
 }
 
 func (r *route) HandleFunc(method string, handler http.HandlerFunc) {
 	r.Handle(method, handler)
+}
+
+func (r *route) GetMethods() []string {
+	return r.methods.ToArray()
 }
 
 // Get
@@ -99,15 +88,19 @@ func (r *route) DeleteFunc(handler http.HandlerFunc) {
 	r.Delete(handler)
 }
 
+func (r *route) GetAllRoutes() []*route {
+	return r.router.GetAllRoutes()
+}
+
 // UTIL FUNCS
 func sanitizeRoute(route string) string {
 	for strings.Contains(route, "//") {
 		route = strings.ReplaceAll(route, "//", "/")
 	}
 
-	if route[len(route)-1] != '/' {
-		route += "/"
-	}
+	// if route[len(route)-1] != '/' {
+	// 	route += "/"
+	// }
 
 	return route
 }
