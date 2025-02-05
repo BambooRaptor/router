@@ -15,7 +15,7 @@ import (
 func TestRouter(t *testing.T) {
 	r := router.New()
 
-	r.Route("/").GetFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.Route("/").Get(func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Hello, World!"))
 		if err != nil {
 			t.Fatalf("Failed to write HTTP response: %v", err)
@@ -59,14 +59,14 @@ func TestAllowedMethods(t *testing.T) {
 	r := router.New()
 	r.Use(r.SetAllowedMethods)
 
-	r.Route("/ping").GetFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.Route("/ping").Get(func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("get-pong"))
 		if err != nil {
 			t.Fatalf("Failed to write HTTP response: %v", err)
 		}
 	})
 
-	r.Route("/ping").PostFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.Route("/ping").Post(func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("post-pong"))
 		if err != nil {
 			t.Fatalf("Failed to write HTTP response: %v", err)
