@@ -16,8 +16,13 @@ type route struct {
 	methods set.Set[string]
 }
 
+func newRoute(router *Router, path string) *route {
+	path = validatePath(path)
+	return &route{router, path, pipeline.New[http.Handler](), set.New[string]()}
+}
+
 func (r *route) Route(pattern string) *route {
-	return r.router.newRoute(r.path+pattern, r.pipe)
+	return r.router.Route(r.path + pattern).UsePipeline(r.pipe)
 }
 
 func (r *route) String() string {
@@ -36,6 +41,7 @@ func (r *route) UsePipeline(pipe pipeline.Pipeline[http.Handler]) *route {
 
 func (r *route) Handle(method string, handler http.Handler) {
 	path := r.path
+
 	if method != "" {
 		if r.methods.Has(method) {
 			panic(fmt.Sprintf("Method [%s] on route %q already exists", method, path))
@@ -43,7 +49,8 @@ func (r *route) Handle(method string, handler http.Handler) {
 		r.methods.Add(method)
 		path = method + " " + r.path
 	}
-	r.router.mux.Handle(path, r.pipe.Build(handler))
+
+	r.router.mux.Handle(path, r.router.pipe.Into(r.pipe).Build(handler))
 }
 
 func (r *route) HandleFunc(method string, handler http.HandlerFunc) {
@@ -93,7 +100,7 @@ func (r *route) GetAllRoutes() []*route {
 }
 
 // UTIL FUNCS
-func sanitizeRoute(route string) string {
+func sanitizePath(route string) string {
 	for strings.Contains(route, "//") {
 		route = strings.ReplaceAll(route, "//", "/")
 	}
@@ -103,4 +110,20 @@ func sanitizeRoute(route string) string {
 	// }
 
 	return route
+}
+
+func validatePath(path string) string {
+	path = sanitizePath(path)
+	if len(path) == 0 {
+		panic("Cannot have an empty route")
+	}
+
+	if len(path) > 1 && path[len(path)-1] == '/' {
+		panic("Routes cannot end with '/'")
+	}
+
+	if path[0] != '/' {
+		panic("Routes must begin with '/'")
+	}
+	return path
 }

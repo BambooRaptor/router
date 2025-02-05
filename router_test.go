@@ -86,7 +86,7 @@ func TestAllowedMethods(t *testing.T) {
 		methods := set.FromArray(strings.Split(header, ", "))
 		expected := set.FromArray([]string{"GET", "POST"})
 
-		if !expected.Matches(methods) {
+		if !expected.Matches(&methods) {
 			t.Fatalf("Response expected, but got:\n%q <=/=> %q", expected, methods)
 		}
 	})
