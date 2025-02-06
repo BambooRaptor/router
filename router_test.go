@@ -12,7 +12,27 @@ import (
 	"github.com/BambooRaptor/router/pkgs/set"
 )
 
-func TestRouter(t *testing.T) {
+func assertResponse(t *testing.T, s *httptest.Server, route string, expected string) {
+	resp, err := s.Client().Get(s.URL + route)
+	if err != nil {
+		t.Fatalf("Unexpected error from server: %v", err)
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("Status Code expected, but got:\n[200] <=/=> [%v]", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Error reading body: %v", err)
+	}
+
+	if !bytes.Equal(body, []byte(expected)) {
+		t.Fatalf("Response expected, but got:\n%q <=/=> %q", body, expected)
+	}
+}
+
+func TestBasicRouter(t *testing.T) {
 	r := router.New()
 
 	r.Route("/").Get(func(w http.ResponseWriter, r *http.Request) {
@@ -22,40 +42,20 @@ func TestRouter(t *testing.T) {
 		}
 	})
 
-	assertResponse := func(t *testing.T, s *httptest.Server, expected string) {
-		resp, err := s.Client().Get(s.URL)
-		if err != nil {
-			t.Fatalf("Unexpected error from server: %v", err)
-		}
-
-		if resp.StatusCode != 200 {
-			t.Fatalf("Status Code expected, but got:\n[200] <=/=> [%v]", resp.StatusCode)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("Error reading body: %v", err)
-		}
-
-		if !bytes.Equal(body, []byte(expected)) {
-			t.Fatalf("Response expected, but got:\n%q <=/=> %q", body, expected)
-		}
-	}
-
 	t.Run("basic router", func(t *testing.T) {
 		s := httptest.NewServer(r)
 		defer s.Close()
-		assertResponse(t, s, "Hello, World!")
+		assertResponse(t, s, "/", "Hello, World!")
 	})
 
 	t.Run("basic TLSS router", func(t *testing.T) {
 		s := httptest.NewTLSServer(r)
 		defer s.Close()
-		assertResponse(t, s, "Hello, World!")
+		assertResponse(t, s, "/", "Hello, World!")
 	})
 }
 
-func TestAllowedMethods(t *testing.T) {
+func TestBasicMiddleware(t *testing.T) {
 	r := router.New()
 	r.Use(r.SetAllowedMethods)
 

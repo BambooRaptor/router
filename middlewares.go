@@ -8,8 +8,8 @@ import (
 func (router *Router) SetAllowedMethods(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		pattern := r.Pattern
-		patternHasMethod := strings.ContainsAny(r.Pattern, " ")
-		if patternHasMethod {
+		// Pattern has method. Eg. "GET /ping", "POST /user/comment"
+		if strings.ContainsAny(r.Pattern, " ") {
 			pattern = strings.Split(r.Pattern, " ")[1]
 		}
 
