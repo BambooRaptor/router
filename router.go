@@ -6,6 +6,8 @@ import (
 	"github.com/BambooRaptor/pipeline"
 )
 
+// Defines the Router and holds the ServeMux assinged to it
+// and holds all the routes and global router middleware pipeline
 type Router struct {
 	mux    *http.ServeMux
 	routes map[string]*route

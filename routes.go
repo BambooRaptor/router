@@ -27,9 +27,9 @@ func (r *route) Route(pattern string) *route {
 	return r.router.Route(r.path + pattern).UsePipeline(r.pipe)
 }
 
-// Debugging purposes
+// Debugging purposes -> Returns the path of the route
 func (r *route) String() string {
-	return fmt.Sprint(r.path)
+	return r.path
 }
 
 // Attach middleware specifically to this route,
@@ -71,6 +71,7 @@ func (r *route) Handle(method string, handler http.HandlerFunc) {
 	r.Handler(method, handler)
 }
 
+// Get all the methods currently implemented on the route
 func (r *route) GetMethods() []string {
 	return r.methods.ToArray()
 }
