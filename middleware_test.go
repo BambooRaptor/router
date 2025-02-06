@@ -74,3 +74,32 @@ func TestSeperatePipelinesForRouterAndRoute(t *testing.T) {
 		assertResponse(t, s, "/nested/deeply/torouter", "1231011\ndeep fin.")
 	})
 }
+
+func TestUnorderedMiddlewareDeclaration(t *testing.T) {
+	rtr := router.New()
+	rtr.Use(
+		addNumToResponse(1),
+		addNumToResponse(2),
+		addNumToResponse(3),
+	)
+
+	rootRoute := rtr.Route("/")
+	rootRoute.Use(
+		addNumToResponse(4),
+		addNumToResponse(5),
+	).Get(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("\nroot route fin."))
+	})
+
+	// Middleware added after the route handler has already been delcared
+	rootRoute.Use(
+		addNumToResponse(6),
+		addNumToResponse(7),
+	)
+
+	t.Run("Unordered Middleware Declaration", func(t *testing.T) {
+		s := httptest.NewServer(rtr)
+		defer s.Close()
+		assertResponse(t, s, "/", "1234567\nroot route fin.")
+	})
+}

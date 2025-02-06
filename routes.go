@@ -54,11 +54,16 @@ func (r *route) Handler(method string, handler http.Handler) {
 		if r.methods.Has(method) {
 			panic(fmt.Sprintf("Method [%s] on route %q already exists", method, path))
 		}
-		r.methods.Add(method)
+		err := r.methods.Add(method)
+		if err != nil {
+			panic(fmt.Sprintf("Route %q with method [%v] already exists", path, method))
+		}
 		path = method + " " + r.path
 	}
 
-	r.router.mux.Handle(path, r.router.pipe.Into(r.pipe).Build(handler))
+	r.router.mux.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
+		r.router.pipe.Into(r.pipe).Build(handler).ServeHTTP(w, req)
+	})
 }
 
 // Handle the route with a custom method and function
