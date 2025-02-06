@@ -35,10 +35,11 @@ func TestSeperatePipelinesForRouterAndRoute(t *testing.T) {
 		_, _ = w.Write([]byte("\nroot route fin."))
 	})
 
-	rootRoute.Route("/nested").Use(
+	nested := rootRoute.Route("/nested").Use(
 		addNumToResponse(6),
 		addNumToResponse(7),
-	).Get(func(w http.ResponseWriter, r *http.Request) {
+	)
+	nested.Get(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("\nnested fin."))
 	})
 
@@ -56,12 +57,20 @@ func TestSeperatePipelinesForRouterAndRoute(t *testing.T) {
 		_, _ = w.Write([]byte("\ndeep fin."))
 	})
 
+	nested.Route("/deeply").Use(
+		addNumToResponse(12),
+		addNumToResponse(13),
+	).Get(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("\nnested deep fin."))
+	})
+
 	t.Run("Middlware Pipeline", func(t *testing.T) {
 		s := httptest.NewServer(rtr)
 		defer s.Close()
 		assertResponse(t, s, "/", "12345\nroot route fin.")
 		assertResponse(t, s, "/nested", "1234567\nnested fin.")
 		assertResponse(t, s, "/other", "1234589\nother fin.")
+		assertResponse(t, s, "/nested/deeply", "12345671213\nnested deep fin.")
 		assertResponse(t, s, "/nested/deeply/torouter", "1231011\ndeep fin.")
 	})
 }
